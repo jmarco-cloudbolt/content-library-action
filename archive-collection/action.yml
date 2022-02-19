@@ -1,0 +1,79 @@
+name: 'Archive Content Library Collections'
+
+description: 'Generates and uploads a combined tar.gz artifact for the specified content type.'
+
+inputs:
+  content-type: # The content type (e.g. "blueprints") to collect and upload as an artifact.
+    description: 'The content type (e.g. "blueprints") to collect and upload as a .tar.gz artifact.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Prepare Environment
+      id: "environment"
+      shell: bash -leo pipefail
+      env:
+        CONTENT_TYPE: ${{ inputs.content-type }}
+      run: |
+        rm -rf .
+        types=()
+        types+=("blueprints")
+        types+=("ui-extension-packages")
+        types+=("orchestration-packages")
+        types+=("recurring-jobs")
+        types+=("server-actions")
+        types+=("resource-actions")
+        echo "::set-output name=content-types::${types[@]}"
+        content_type_valid="false"
+        for valid_type in ${types[@]} ; do
+          if [ "${valid_type}" == "${CONTENT_TYPE}" ] then
+            content_type_valid="true"
+            break
+          fi
+        done
+        if [ "${content_type_valid}" == "false" ] ; then
+            echo "Error: Content Type Not Supported." >&2
+            echo "Error: Valid Content Types: ${types[@]}" >&2
+            exit 1
+        fi
+
+    - name: Check Out Content
+      uses: actions/checkout@v2
+
+    - name: Create Tar File Artifact For Content Type
+      id: "tarfile"
+      shell: bash -leo pipefail
+      env:
+        CONTENT_TYPE: ${{ inputs.content-type }}
+      run: |
+        rm -rf ./tmp
+        mkdir -p ./tmp
+        if [ -d "CMP/${CONTENT_TYPE}" ] ; then
+          echo "Gathering zip files for content type: ${CONTENT_TYPE}"
+          find "CMP/${CONTENT_TYPE}" -type f -name '*.zip' -print0 | while IFS= read -r -d '' file; do
+            echo "Found: ${file}"
+            BASENAME=$(basename "${file}")
+            mv "${file}" "./tmp/${BASENAME}"
+          done
+          echo "Creating .tar.gz artifact for content type: ${CONTENT_TYPE}"
+          cd ./tmp
+          find . -not -name '.' -print0 > ../tarfiles.lst
+          if [ -s ./tarfiles.lst ] ; then
+            tar -cvzf "$CONTENT_TYPE".tar.gz .
+            echo "::set-output name=have-tarfile::true"
+          else
+            rm -f "$CONTENT_TYPE".tar.gz
+            echo "::set-output name=have-tarfile::false"
+          fi
+          cd ..
+          rm -f ./tarfiles.lst
+        fi
+
+    - uses: actions/upload-artifact@v2
+      if: ${{ steps.tarfile.outputs.have-tarfile == 'true' }}
+      with:
+        name: ${{ inputs.content-type }}
+        path: |
+          **/${{ inputs.content-type }}.tar.gz
+
