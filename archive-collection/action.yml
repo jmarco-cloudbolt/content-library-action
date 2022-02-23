@@ -72,19 +72,19 @@ runs:
           if [ -s ./tarfiles.lst ] ; then
             tar -cvzf "$CONTENT_TYPE".tar.gz .
             echo "::set-output name=have-tarfile::true"
-            echo "::set-env name=HAVE_TARFILE::true"
+            echo "have_tarfile=true" >> $GITHUB_ENV
           else
             rm -f "$CONTENT_TYPE".tar.gz
             echo "::set-output name=have-tarfile::false"
-            echo "::set-env name=HAVE_TARFILE::false"
+            echo "have_tarfile=false" >> $GITHUB_ENV
           fi
-          echo "Output: ${{ env.HAVE_TARFILE }}"
+          echo "Output: ${{ env.have_tarfile }}"
           cd ..
           rm -f ./tarfiles.lst
         fi
 
     - uses: actions/upload-artifact@v2
-      if: ${{ env.HAVE_TARFILE == 'true' }}
+      if: ${{ env.have_tarfile == 'true' }}
       with:
         name: ${{ inputs.content-type }}
         path: |
