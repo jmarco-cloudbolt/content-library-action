@@ -27,7 +27,7 @@ runs:
         echo "::set-output name=content-types::${types[@]}"
         content_type_valid="false"
         for valid_type in ${types[@]} ; do
-          if [ "${valid_type}" == "${CONTENT_TYPE}" ] then
+          if [ "${valid_type}" == "${CONTENT_TYPE}" ] ; then
             content_type_valid="true"
             break
           fi
