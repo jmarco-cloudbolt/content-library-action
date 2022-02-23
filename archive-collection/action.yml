@@ -12,7 +12,7 @@ runs:
   steps:
     - name: Prepare Environment
       id: "environment"
-      shell: bash -leo pipefail
+      shell: bash -leo pipefail {0}
       env:
         CONTENT_TYPE: ${{ inputs.content-type }}
       run: |
@@ -43,7 +43,7 @@ runs:
 
     - name: Create Tar File Artifact For Content Type
       id: "tarfile"
-      shell: bash -leo pipefail
+      shell: bash -leo pipefail {0}
       env:
         CONTENT_TYPE: ${{ inputs.content-type }}
       run: |
