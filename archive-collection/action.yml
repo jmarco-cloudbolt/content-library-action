@@ -82,7 +82,7 @@ runs:
         fi
 
     - uses: actions/upload-artifact@v2
-      if: ${{ steps.tarfile.outputs.have-tarfile == 'true' }}
+      if: ${{ outputs.have-tarfile == 'true' }}
       with:
         name: ${{ inputs.content-type }}
         path: |
