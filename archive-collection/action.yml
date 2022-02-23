@@ -6,6 +6,13 @@ inputs:
   content-type: # The content type (e.g. "blueprints") to collect and upload as an artifact.
     description: 'The content type (e.g. "blueprints") to collect and upload as a .tar.gz artifact.'
     required: true
+outputs:
+  content-types:
+    description: 'The valid list of content types.'
+    value: ${{ steps.environment.outputs.content-types }}
+  have-tarfile:
+    description: 'If "true" then a tar file artifact was generated.'
+    value: ${{ steps.tarfile.outputs.have-tarfile }}
 
 runs:
   using: "composite"
@@ -68,7 +75,7 @@ runs:
             rm -f "$CONTENT_TYPE".tar.gz
             echo "::set-output name=have-tarfile::false"
           fi
-          echo "Output: ${{outputs.have-tarfile}}"
+          echo "Output: ${{ steps.tarfile.outputs.have-tarfile }}"
           cd ..
           rm -f ./tarfiles.lst
         fi
