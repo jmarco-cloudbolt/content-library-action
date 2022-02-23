@@ -16,7 +16,7 @@ runs:
       env:
         CONTENT_TYPE: ${{ inputs.content-type }}
       run: |
-        rm -rf .
+        rm -rf .[^.]* * 
         types=()
         types+=("blueprints")
         types+=("ui-extension-packages")
