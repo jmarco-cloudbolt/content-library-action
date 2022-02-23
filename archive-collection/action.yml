@@ -55,7 +55,6 @@ runs:
       env:
         CONTENT_TYPE: ${{ inputs.content-type }}
       run: |
-        echo "::set-output name=have-tarfile::false"
         echo "CREATING TAR FILE ARTIFACT FOR CONTENT TYPE"
         rm -rf ./tmp
         mkdir -p ./tmp
@@ -68,6 +67,8 @@ runs:
           done
           echo "Creating .tar.gz artifact for content type: ${CONTENT_TYPE}"
           cd ./tmp
+          echo "tree"
+          tree
           find . -not -name '.' -print0 > ../tarfiles.lst
           if [ -s ./tarfiles.lst ] ; then
             tar -cvzf "$CONTENT_TYPE".tar.gz .
