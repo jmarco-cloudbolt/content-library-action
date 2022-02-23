@@ -69,9 +69,9 @@ runs:
           cd ./tmp
           echo "tree"
           tree
-          find . -not -name '.' -print0 > ../tarfiles.lst
-          if [ -s ../tarfiles.lst ] ; then
-            tar -cvzf "$CONTENT_TYPE".tar.gz .
+          find . -not -name '.' -a -not -name 'tarfiles.lst' -print0 > ./tarfiles.lst
+          if [ -s ./tarfiles.lst ] ; then
+            tar -cvzf "$CONTENT_TYPE".tar.gz --null --files-from=./tarfiles.lst
             echo "::set-output name=have-tarfile::true"
           else
             rm -f "$CONTENT_TYPE".tar.gz
