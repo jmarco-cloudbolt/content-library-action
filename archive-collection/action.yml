@@ -75,7 +75,7 @@ runs:
             rm -f "$CONTENT_TYPE".tar.gz
             echo "::set-output name=have-tarfile::false"
           fi
-          echo "Output: ${{ outputs.have-tarfile }}"
+          echo "Output: ${{ steps.tarfile.outputs.* }}"
           cd ..
           rm -f ./tarfiles.lst
         fi
