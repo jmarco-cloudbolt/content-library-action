@@ -7,9 +7,6 @@ inputs:
     description: 'The content type (e.g. "blueprints") to collect and upload as a .tar.gz artifact.'
     required: true
 outputs:
-  content-types:
-    description: 'The valid list of content types.'
-    value: ${{ steps.environment.outputs.content-types }}
   have-tarfile:
     description: 'If "true" then a tar file artifact was generated.'
     value: ${{ steps.tarfile.outputs.have-tarfile }}
@@ -18,12 +15,12 @@ runs:
   using: "composite"
   steps:
     - name: Prepare Environment
-      id: environment
       shell: bash -leo pipefail {0}
       env:
         CONTENT_TYPE: ${{ inputs.content-type }}
       run: |
         echo "PREPARING ENVIRONMENT"
+        echo "====================="
         rm -rf .[^.]* * 
         types=()
         types+=("blueprints")
@@ -32,7 +29,6 @@ runs:
         types+=("recurring-jobs")
         types+=("server-actions")
         types+=("resource-actions")
-        echo "::set-output name=content-types::${types[@]}"
         content_type_valid="false"
         for valid_type in ${types[@]} ; do
           if [ "${valid_type}" == "${CONTENT_TYPE}" ] ; then
@@ -46,6 +42,10 @@ runs:
             exit 1
         fi
 
+    - run: |
+        echo "CHECKING OUT CONTENT"
+        echo "===================="
+
     - name: Check Out Content
       uses: actions/checkout@v2
 
@@ -56,6 +56,7 @@ runs:
         CONTENT_TYPE: ${{ inputs.content-type }}
       run: |
         echo "CREATING TAR FILE ARTIFACT FOR CONTENT TYPE"
+        echo "==========================================="
         rm -rf ./tmp
         mkdir -p ./tmp
         if [ -d "CMP/${CONTENT_TYPE}" ] ; then
@@ -81,6 +82,16 @@ runs:
           cd ..
           rm -f ./tarfiles.lst
         fi
+
+    - if: ${{ steps.tarfile.outputs.have-tarfile == 'false' }}
+      run: |
+        echo "NO ARTIFACTS TO UPLOAD"
+        echo "======================"
+
+    - if: ${{ steps.tarfile.outputs.have-tarfile == 'true' }}
+      run: |
+        echo "UPLOADING ARTIFACTS"
+        echo "==================="
 
     - uses: actions/upload-artifact@v2
       if: ${{ steps.tarfile.outputs.have-tarfile == 'true' }}
