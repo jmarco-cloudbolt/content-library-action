@@ -70,22 +70,20 @@ runs:
           echo "tree"
           tree
           find . -not -name '.' -print0 > ../tarfiles.lst
-          if [ -s ./tarfiles.lst ] ; then
+          if [ -s ../tarfiles.lst ] ; then
             tar -cvzf "$CONTENT_TYPE".tar.gz .
             echo "::set-output name=have-tarfile::true"
-            echo "have_tarfile=true" >> $GITHUB_ENV
           else
             rm -f "$CONTENT_TYPE".tar.gz
             echo "::set-output name=have-tarfile::false"
-            echo "have_tarfile=false" >> $GITHUB_ENV
           fi
-          echo "Output: ${{ env.have_tarfile }}"
+          echo "Output: ${{ steps.tarfile.outputs.have-tarfile }}"
           cd ..
           rm -f ./tarfiles.lst
         fi
 
     - uses: actions/upload-artifact@v2
-      if: ${{ env.have_tarfile == 'true' }}
+      if: ${{ steps.tarfile.outputs.have-tarfile == 'true' }}
       with:
         name: ${{ inputs.content-type }}
         path: |
