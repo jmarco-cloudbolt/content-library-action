@@ -45,6 +45,7 @@ runs:
     - run: |
         echo "CHECKING OUT CONTENT"
         echo "===================="
+      shell: bash -leo pipefail {0}
 
     - name: Check Out Content
       uses: actions/checkout@v2
@@ -87,11 +88,13 @@ runs:
       run: |
         echo "NO ARTIFACTS TO UPLOAD"
         echo "======================"
+      shell: bash -leo pipefail {0}
 
     - if: ${{ steps.tarfile.outputs.have-tarfile == 'true' }}
       run: |
         echo "UPLOADING ARTIFACTS"
         echo "==================="
+      shell: bash -leo pipefail {0}
 
     - uses: actions/upload-artifact@v2
       if: ${{ steps.tarfile.outputs.have-tarfile == 'true' }}
