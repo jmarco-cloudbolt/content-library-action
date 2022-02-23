@@ -69,8 +69,6 @@ runs:
           done
           echo "Creating .tar.gz artifact for content type: ${CONTENT_TYPE}"
           cd ./tmp
-          echo "tree"
-          tree
           find . -not -name '.' -a -not -name 'tarfiles.lst' -print0 > ./tarfiles.lst
           if [ -s ./tarfiles.lst ] ; then
             tar -cvzf "$CONTENT_TYPE".tar.gz --null --files-from=./tarfiles.lst
@@ -79,7 +77,6 @@ runs:
             rm -f "$CONTENT_TYPE".tar.gz
             echo "::set-output name=have-tarfile::false"
           fi
-          echo "Output: ${{ steps.tarfile.outputs.have-tarfile }}"
           cd ..
           rm -f ./tarfiles.lst
         fi
