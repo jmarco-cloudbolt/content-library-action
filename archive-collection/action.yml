@@ -18,7 +18,7 @@ runs:
   using: "composite"
   steps:
     - name: Prepare Environment
-      id: "environment"
+      id: environment
       shell: bash -leo pipefail {0}
       env:
         CONTENT_TYPE: ${{ inputs.content-type }}
@@ -50,7 +50,7 @@ runs:
       uses: actions/checkout@v2
 
     - name: Create Tar File Artifact For Content Type
-      id: "tarfile"
+      id: tarfile
       shell: bash -leo pipefail {0}
       env:
         CONTENT_TYPE: ${{ inputs.content-type }}
