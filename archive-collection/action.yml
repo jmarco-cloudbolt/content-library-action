@@ -72,11 +72,13 @@ runs:
           if [ -s ./tarfiles.lst ] ; then
             tar -cvzf "$CONTENT_TYPE".tar.gz .
             echo "::set-output name=have-tarfile::true"
+            echo "::set-env name=HAVE_TARFILE::true"
           else
             rm -f "$CONTENT_TYPE".tar.gz
             echo "::set-output name=have-tarfile::false"
+            echo "::set-env name=HAVE_TARFILE::false"
           fi
-          echo "Output: ${{ steps.tarfile.outputs.have-tarfile }}"
+          echo "Output: ${{ env.HAVE_TARFILE }}"
           cd ..
           rm -f ./tarfiles.lst
         fi
