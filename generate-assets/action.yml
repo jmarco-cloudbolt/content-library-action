@@ -162,8 +162,7 @@ runs:
 
         log_json() {
           local JSON="$1"
-          cat "$JSON"
-          echo "$JSON" | jq -r '.'
+          cat "$JSON" | jq -r '.'
         }
 
         move_and_log_file() {
