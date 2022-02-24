@@ -1,0 +1,79 @@
+  steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+
+    - name: Find asset artifacts
+      run: |
+        rm -rf ./assets
+        if [ -d ./artifacts ] ; then
+            mkdir ./assets
+            echo "Downloaded files:"
+            tree
+            echo "Finding assets:"
+            find ./artifacts -maxdepth 2 -type d -name '* Assets' -print0 | while IFS= read -r -d '' dir ; do
+              echo "Found assets: $dir"
+              basedir=$(basename "$dir")
+              mv "$dir" "./assets/$basedir"
+            done
+            rm -rf ./artifacts
+            rmdir --ignore-fail-on-non-empty ./assets
+        fi
+        if [ -d ./assets ] ; then
+          echo "Assets found."
+          tree
+        else
+          echo "No assets found."
+        fi
+
+    - name: Unpack all downloaded asset artifacts
+      run: |
+        find ./assets -type f -name '*.tar.gz' -print0 | while IFS= read -r -d '' file ; do
+          echo "Untarring $file"
+          tar -xzf "$file" -C .
+        done
+
+    - name: Remove temporary directories
+      run: |
+        rm -vrf tmp tmp_images assets
+
+    - name: Print directory tree
+      run: |
+        tree
+
+    - name: List Changed Collections
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      id: list-changed-collections
+      run: |
+        PR_NUMBER=$(echo $GITHUB_REF | awk -F/ '{ print $3 }')
+        RESULTS=$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --paginate --jq ".[].filename")
+        echo "$RESULTS"
+        # Determine Type and Name
+        COLLECTION_NAME_BY_TYPE=$(echo "$RESULTS" | grep -v .github | awk -F/ '{print $2,",",$3}' \
+        | jq -ncR '[inputs] | map(split(" , ")) | unique | map({type: .[0]|tostring, name: .[1]|tostring})')
+        echo "$COLLECTION_NAME_BY_TYPE"
+        echo "::set-output name=COLLECTION_NAME_BY_TYPE::$COLLECTION_NAME_BY_TYPE"
+
+    - name: Find and Add Sha
+      run: |
+        mkdir tmp_json
+        # Make a compound index key'd on name and type 
+        jq '. | INDEX(.name + (input_filename | split("/") | .[-1] | rtrimstr(".json")))' **/*.json > ./tmp_json/collections_by_nametype.json
+        # Filter the changed collections by name and type and save to nametype.json files
+        echo '${{ steps.list-changed-collections.outputs.COLLECTION_NAME_BY_TYPE }}' |\
+        jq '.[].name + .[].type' |\
+        xargs  -I {} jq '."{}"' ./tmp_json/collections_by_nametype.json >> ./tmp_json/results.json 
+        cat ./tmp_json/results.json # For debugging
+        rm ./tmp_json/collections_by_nametype.json
+        jq -s 'INDEX(.sha)' ./tmp_json/results.json > collections_changed_by_sha.json
+
+    - name: Upload changed collections
+      id: upload-changed-collections
+      uses: actions/upload-artifact@v2
+      with:
+        name: Changed Collections
+        path: |
+          collections_changed_by_sha.json
+

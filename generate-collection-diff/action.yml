@@ -1,0 +1,101 @@
+name: 'Generate Content Library Collection Diffs'
+
+description: 'Generates content library collection diffs for pull requests.'
+
+inputs:
+  github-token:
+    description: 'The GitHub API token (secrets.GITHUB_TOKEN) for the current job.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Artifacts Message
+      shell: bash -leo pipefail {0}
+      run: |
+        echo "DOWNLOADING ARTIFACTS"
+        echo "====================="
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+
+    - name: Generate Collection Diffs
+      shell: bash -leo pipefail {0}
+      run: |
+        echo "GENERATING COLLECTION DIFFS"
+        echo "==========================="
+
+        echo "FINDING DOWNLOADED ASSET ARTIFACTS"
+        echo "----------------------------------"
+        rm -rf ./assets
+        if [ -d ./artifacts ] ; then
+            mkdir ./assets
+            echo "Downloaded files:"
+            tree
+            echo "Finding assets:"
+            find ./artifacts -maxdepth 2 -type d -name '* Assets' -print0 | while IFS= read -r -d '' dir ; do
+              echo "Found assets: $dir"
+              basedir=$(basename "$dir")
+              mv "$dir" "./assets/$basedir"
+            done
+            rm -rf ./artifacts
+            rmdir --ignore-fail-on-non-empty ./assets
+        fi
+        if [ -d ./assets ] ; then
+          echo "Assets found."
+          tree
+        else
+          echo "No assets found."
+        fi
+
+        echo "UNPACKING DOWNLOADED ASSET ARTIFACTS"
+        echo "------------------------------------"
+        find ./assets -type f -name '*.tar.gz' -print0 | while IFS= read -r -d '' file ; do
+          echo "Untarring $file"
+          tar -xzf "$file" -C .
+        done
+
+        echo "REMOVING TEMPORARY DIRECTORIES"
+        echo "------------------------------"
+        rm -vrf tmp tmp_images assets
+
+        echo "PRINTING DIRECTORY TREE"
+        echo "-----------------------"
+        tree
+
+        echo "LISTING CHANGED COLLECTIONS"
+        echo "---------------------------"
+        PR_NUMBER=$(echo $GITHUB_REF | awk -F/ '{ print $3 }')
+        RESULTS=$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --paginate --jq ".[].filename")
+        echo "$RESULTS"
+        # Determine Type and Name
+        COLLECTION_NAME_BY_TYPE=$(echo "$RESULTS" | grep -v .github | awk -F/ '{print $2,",",$3}' \
+        | jq -ncR '[inputs] | map(split(" , ")) | unique | map({type: .[0]|tostring, name: .[1]|tostring})')
+
+        echo "PRINTING COLLECTION_NAME_BY_TYPE"
+        echo "--------------------------------"
+        echo "$COLLECTION_NAME_BY_TYPE"
+
+        echo "ADDING SHA TO COLLECTIONS DIFF"
+        echo "------------------------------"
+        mkdir tmp_json
+        # Make a compound index key'd on name and type 
+        jq '. | INDEX(.name + (input_filename | split("/") | .[-1] | rtrimstr(".json")))' **/*.json > ./tmp_json/collections_by_nametype.json
+        # Filter the changed collections by name and type and save to nametype.json files
+        echo "${COLLECTION_NAME_BY_TYPPE}" |\
+        jq '.[].name + .[].type' |\
+        xargs  -I {} jq '."{}"' ./tmp_json/collections_by_nametype.json >> ./tmp_json/results.json 
+        cat ./tmp_json/results.json # For debugging
+        rm ./tmp_json/collections_by_nametype.json
+        jq -s 'INDEX(.sha)' ./tmp_json/results.json > collections_changed_by_sha.json
+
+    - name: Upload changed collections
+      id: upload-changed-collections
+      uses: actions/upload-artifact@v2
+      with:
+        name: Changed Collections
+        path: |
+          collections_changed_by_sha.json
+

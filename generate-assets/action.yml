@@ -76,8 +76,11 @@ runs:
       if: ${{ steps.check.outputs.have-content == 'true' }}
       shell: bash -leo pipefail {0}
       run: |
+        echo "GENERATING CONTENT LIBRARY ASSETS"
+        echo "================================="
+
         echo "UNTAR ALL ARTIFACT ZIP FILES"
-        echo "============================"
+        echo "----------------------------"
         rm -f *.zip
         echo "current dir:"
         pwd
@@ -87,11 +90,11 @@ runs:
         cd ../../../
 
         echo "PRINT DIRECTORY TREE"
-        echo "===================="
+        echo "--------------------"
         tree
 
         echo "GENERATE SHA FILE FOR ARTIFACT ZIP FILES"
-        echo "========================================"
+        echo "----------------------------------------"
         for f in downloads/${{inputs.content-type}}/tmp/*.zip; do
           echo "Generating SHA for $f"
           sha256sum "$f" >> sha256sum.txt
@@ -99,7 +102,7 @@ runs:
         cat ./sha256sum.txt
 
         echo "GENERATE CONTENT LIBRARY ASSETS FROM ARTIFACT ZIP FILES"
-        echo "======================================================="
+        echo "-------------------------------------------------------"
         # WARNING: This script will skip collections with special characters in their name.
         set -x
 
@@ -223,7 +226,7 @@ runs:
         done
 
         echo "CLEAN UP FILES AND DIRECTORIES"
-        echo "=============================="
+        echo "------------------------------"
         rm -vrf tmp
         rm -vrf CMP
         rm -vrf metadata
@@ -233,7 +236,7 @@ runs:
         rm -vrf sha256sum_png.txt
 
         echo "CREATE JSON FILE FOR CONTENT TYPE"
-        echo "================================="
+        echo "---------------------------------"
         for f in ./*/*.json; do
           echo "Processing $f ..."
           DIRNAME="$(dirname "$f")"
@@ -243,19 +246,19 @@ runs:
         done
 
         echo "DISPLAY DIRECTORY TREE"
-        echo "======================"
+        echo "----------------------"
         tree -L 5
 
         echo "CLEAN UP METADATA JSON FILES"
-        echo "============================"
+        echo "----------------------------"
         find . -type f -name '*Metadata.json' -exec rm -vf {} \;
 
         echo "DISPLAY DIRECTORY TREE"
-        echo "======================"
+        echo "----------------------"
         tree -L 5
 
         echo "CREATE ASSETS TAR FILE"
-        echo "======================"
+        echo "----------------------"
         tar --exclude-vcs --ignore-failed-read -czvf assets.tar.gz *
 
     - name: No Assets To Upload Message
