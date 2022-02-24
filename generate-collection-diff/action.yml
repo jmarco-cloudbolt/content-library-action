@@ -23,6 +23,8 @@ runs:
 
     - name: Generate Collection Diffs
       shell: bash -leo pipefail {0}
+      env:
+        GITHUB_TOKEN: "${{inputs.github-token}}"
       run: |
         echo "GENERATING COLLECTION DIFFS"
         echo "==========================="
