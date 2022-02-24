@@ -51,7 +51,6 @@ runs:
 
     - name: Download All Artifacts
       uses: actions/download-artifact@v2
-      continue-on-error: true
       with:
         path: downloads
 
