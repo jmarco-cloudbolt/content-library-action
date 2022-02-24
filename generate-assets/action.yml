@@ -162,6 +162,7 @@ runs:
 
         log_json() {
           local JSON="$1"
+          cat "$JSON"
           echo "$JSON" | jq -r '.'
         }
 
