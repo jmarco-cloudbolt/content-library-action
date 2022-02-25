@@ -1,0 +1,112 @@
+name: 'Publish Content Library Assets'
+
+description: 'Publishes content library assets to the configured S3 bucket.'
+
+inputs:
+  aws-account-id:
+    description: 'The AWS account ID to use for AWS API calls.'
+    required: true
+  aws-access-key-id:
+    description: 'The AWS access key ID to use for AWS API calls.'
+    required: true
+  aws-access-key-secret:
+    description: 'The AWS access key secret to use for AWS API calls.'
+    required: true
+  aws-default-region:
+    description: 'The AWS default region to use for AWS API calls.'
+    required: true
+  aws-content-library-role:
+    description: 'The name of the AWS role to assume for AWS API calls.'
+    required: true
+  aws-s3-bucket:
+    description: 'The name of the S3 bucket to publish content to.'
+    required: true
+  aws-s3-backup-bucket:
+    description: 'The name of the S3 bucket to publish backups to. (Default is aws-s3-bucket value)'
+    required: false
+  cloudfront-distribution-id:
+    description: 'The CloudFront distribution ID for generating cache invalidations on publication.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Begin Action Message
+      shell: bash -leo pipefail {0}
+      run: |
+        echo "BEGIN CONTENT LIBRARY PUBLISH ACTION"
+        echo "===================================="
+
+    - name: Sync current Production to timestamped backup in S3
+      shell: bash -leo pipefail {0}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-access-key-secret }}
+        AWS_DEFAULT_REGION: ${{ inputs.aws-default-region }}
+      run: |
+        echo "Backing Up Current Content To S3 Backup Bucket"
+        echo "----------------------------------------------"
+        BACKUP_TIME=$(date -u +"%FT%H%M%SZ")
+        echo "BACKUP TIME: $BACKUP_TIME"
+
+        CREDENTIALS=$(\
+        aws sts assume-role \
+        --role-arn "arn:aws:iam::${{ inputs.aws-account-id }}:role/${{ inputs.aws-content-library-role }}" \
+        --role-session-name "s3-sync-role" \
+        --duration-seconds 3600\
+        )
+        export AWS_ACCESS_KEY_ID=$(echo $CREDENTIALS | jq -r '.Credentials.AccessKeyId')
+        export AWS_SECRET_ACCESS_KEY=$(echo $CREDENTIALS | jq -r '.Credentials.SecretAccessKey')
+        export AWS_SESSION_TOKEN=$(echo $CREDENTIALS | jq -r '.Credentials.SessionToken')
+
+        aws s3 sync s3://${{ inputs.aws-s3-bucket }}/ s3://${{ inputs.aws-s3-backup-bucket }}/"$BACKUP_TIME"
+
+    - name: Download Artifacts Message
+      shell: bash -leo pipefail {0}
+      run: |
+        echo "DOWNLOADING UPDATED CONTENT ARTIFACTS"
+        echo "-------------------------------------"
+
+    - name: Download Updated Content Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: downloads
+
+    - name: Publish Updated Content Artifacts
+      shell: bash -leo pipefail {0}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-access-key-secret }}
+        AWS_DEFAULT_REGION: ${{ inputs.aws-default-region }}
+      run: |
+        echo "UNPACKING UPDATED CONTENT ARTIFACTS"
+        echo "-----------------------------------"
+        find downloads -name 'assets.tar.gz' -exec tar xvzf {} \;
+        rm -rf ./downloads ./tmp .github .git .gitignore assets.tar.gz
+
+        echo "PRINTING DIRECTORY TREE"
+        echo "-----------------------"
+        tree -L 5
+
+        echo "SYNCING UPDATED CONTENT TO S3"
+        echo "-----------------------------"
+        CREDENTIALS=$(\
+        aws sts assume-role \
+        --role-arn "arn:aws:iam::${{ inputs.aws-account-id }}:role/${{ inputs.aws-content-library-role }}" \
+        --role-session-name "s3-sync-role" \
+        --duration-seconds 3600\
+        )
+        export AWS_ACCESS_KEY_ID=$(echo $CREDENTIALS | jq -r '.Credentials.AccessKeyId')
+        export AWS_SECRET_ACCESS_KEY=$(echo $CREDENTIALS | jq -r '.Credentials.SecretAccessKey')
+        export AWS_SESSION_TOKEN=$(echo $CREDENTIALS | jq -r '.Credentials.SessionToken')
+        aws s3 sync . s3://${{ inputs.aws-s3-bucket }}
+        # invalidate cloudfront distribution cache
+        aws cloudfront create-invalidation --distribution-id ${{ inputs.aws-cloudfront-distribution-id }} --paths "/*"
+
+        echo "PRINTING DIRECTORY TREE"
+        echo "-----------------------"
+        tree -L 5
+
+        echo "END CONTENT LIBRARY PUBLISH ACTION"
+        echo "=================================="
+
