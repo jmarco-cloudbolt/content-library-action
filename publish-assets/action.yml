@@ -27,7 +27,7 @@ inputs:
   aws-s3-backup-bucket:
     description: 'The name of the S3 bucket to publish backups to. (Default is aws-s3-bucket value)'
     required: false
-  cloudfront-distribution-id:
+  aws-cloudfront-distribution-id:
     description: 'The CloudFront distribution ID for generating cache invalidations on publication.'
     required: true
 
