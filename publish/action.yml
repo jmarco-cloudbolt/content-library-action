@@ -3,8 +3,8 @@ name: 'Publish Content Library Assets'
 description: 'Publishes content library assets to the configured S3 bucket.'
 
 inputs:
-  environment:
-    description: 'The environment to publish to. (Staging or Production)'
+  publish-to:
+    description: 'The environment to publish to. (e.g. Staging, Production, None)'
     required: true
   aws-account-id:
     description: 'The AWS account ID to use for AWS API calls.'

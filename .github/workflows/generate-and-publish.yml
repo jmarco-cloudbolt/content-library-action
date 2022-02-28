@@ -3,7 +3,7 @@ name: Generate And Publish Content Library Content
 on:
   workflow_call:
     inputs:
-      environment:
+      publish-to:
         type: string
         required: true
       aws-account-id:
@@ -73,7 +73,7 @@ jobs:
     name: Publish Content To S3
     needs:
       - generate-assets
-    if: github.event_name == 'push' && '${{inputs.environment}}' != '' && 'lowercase(${{inputs.environment}})' != 'none'
+    if: github.event_name == 'push' && '${{inputs.publish-to}}' != '' && 'lowercase(${{inputs.publish-to}})' != 'none'
     runs-on:
       - ubuntu-latest
     steps:
@@ -81,7 +81,7 @@ jobs:
         id: publish
         uses: jmarco-cloudbolt/content-library-action/publish@main
         with:
-          environment: '${{inputs.environment}}'
+          publish-to: '${{inputs.publish-to}}'
           aws-account-id: '${{inputs.aws-account-id}}'
           aws-access-key-id: '${{inputs.aws-access-key-id}}'
           aws-access-key-secret: '${{secrets.aws-access-key-secret}}'
