@@ -77,7 +77,7 @@ jobs:
     runs-on:
       - ubuntu-latest
     steps:
-      - name: Publish To Staging On S3
+      - name: Publish To ${{inputs.publish-to}} On S3
         id: publish
         uses: jmarco-cloudbolt/content-library-action/publish@main
         with:
