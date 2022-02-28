@@ -1,0 +1,93 @@
+name: Generate And Publish Content Library Content
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      aws-account-id:
+        type: string
+        required: true
+      aws-access-key-id:
+        type: string
+        required: true
+      aws-default-region:
+        type: string
+        required: true
+      aws-content-library-role:
+        type: string
+        required: true
+      aws-s3-bucket:
+        type: string
+        required: true
+      aws-s3-backup-bucket:
+        type: string
+        required: true
+      aws-cloudfront-distribution-id:
+        type: string
+        required: true
+    secrets:
+      aws-access-key-secret:
+        required: true
+
+jobs:
+  archive-collections:
+    runs-on: ubuntu-latest
+    name: Archive Collections
+    steps:
+      - name: Archive Collections
+        id: archive
+        uses: jmarco-cloudbolt/content-library-action/archive@main
+        with:
+          content-type: 'blueprints'
+
+  generate-assets:
+    name: Generate Assets
+    needs:
+      - archive-collections
+    runs-on:
+      - ubuntu-latest
+    steps:
+      - name: Generate Assets
+        id: assets
+        uses: jmarco-cloudbolt/content-library-action/generate@main
+        with:
+          content-type: 'blueprints'
+
+  generate-collection-diff:
+    name: Generate Collection Diff
+    needs:
+      - generate-assets
+    if: github.event_name == 'pull_request'
+    runs-on:
+      - ubuntu-latest
+    steps:
+      - name: Generate Collection Diff
+        id: diffs
+        uses: jmarco-cloudbolt/content-library-action/diff@main
+        with:
+          github-token: '${{secrets.GITHUB_TOKEN}}'
+
+  publish-content:
+    name: Publish Content To S3
+    needs:
+      - generate-assets
+    if: github.event_name == 'push' && '${{inputs.environment}}' != '' && 'lowercase(${{inputs.environment}})' != 'none'
+    runs-on:
+      - ubuntu-latest
+    steps:
+      - name: Publish To Staging On S3
+        id: publish
+        uses: jmarco-cloudbolt/content-library-action/publish@main
+        with:
+          environment: '${{inputs.environment}}'
+          aws-account-id: '${{inputs.aws-account-id}}'
+          aws-access-key-id: '${{inputs.aws-access-key-id}}'
+          aws-access-key-secret: '${{secrets.aws-access-key-secret}}'
+          aws-default-region: '${{inputs.aws-default-region}}'
+          aws-content-library-role: '${{inputs.aws-content-library-role}}'
+          aws-s3-bucket: '${{inputs.aws-s3-bucket}}'
+          aws-s3-backup-bucket: '${{inputs.aws-s3-backup-bucket}}'
+          aws-cloudfront-distribution-id: '${{inputs.aws-cloudfront-distribution-id}}'
+
